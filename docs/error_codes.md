@@ -31,9 +31,12 @@
 - `GS104`: `Method can only be called from an enabled module`
 
 ### Owner management related
-- `GS200`: `Owners have already been setup`
+- `GS200`: `Owners have already been set up`
 - `GS201`: `Threshold cannot exceed owner count`
 - `GS202`: `Threshold needs to be greater than 0`
 - `GS203`: `Invalid owner address provided`
 - `GS204`: `Address is already an owner`
 - `GS205`: `Invalid prevOwner, owner pair provided`
+
+### Guard management related
+- `GS300`: `Guard does not implement IERC165`

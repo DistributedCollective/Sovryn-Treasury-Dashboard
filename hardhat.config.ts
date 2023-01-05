@@ -1,10 +1,11 @@
+import type { HardhatUserConfig, HttpNetworkUserConfig } from "hardhat/types";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
 import "solidity-coverage";
 import "hardhat-deploy";
 import dotenv from "dotenv";
-import type { HardhatUserConfig, HttpNetworkUserConfig } from "hardhat/types";
 import yargs from "yargs";
+import { getSingletonFactoryInfo } from "@gnosis.pm/safe-singleton-factory";
 
 const argv = yargs
   .option("network", {
@@ -30,7 +31,7 @@ if (PK) {
   };
 }
 
-if (["mainnet", "rinkeby", "kovan", "goerli"].includes(argv.network) && INFURA_KEY === undefined) {
+if (["mainnet", "rinkeby", "kovan", "goerli", "ropsten", "mumbai", "polygon"].includes(argv.network) && INFURA_KEY === undefined) {
   throw new Error(
     `Could not find Infura key in env, unable to connect to network ${argv.network}`,
   );
@@ -39,9 +40,26 @@ if (["mainnet", "rinkeby", "kovan", "goerli"].includes(argv.network) && INFURA_K
 import "./src/tasks/local_verify"
 import "./src/tasks/deploy_contracts"
 import "./src/tasks/show_codesize"
+import { BigNumber } from "@ethersproject/bignumber";
 
 const primarySolidityVersion = SOLIDITY_VERSION || "0.7.6"
 const soliditySettings = !!SOLIDITY_SETTINGS ? JSON.parse(SOLIDITY_SETTINGS) : undefined
+
+const deterministicDeployment = (network: string) => {
+    const info = getSingletonFactoryInfo(parseInt(network))
+    if (!info) {
+      throw new Error(`
+        Safe factory not found for network ${network}. You can request a new deployment at https://github.com/safe-global/safe-singleton-factory.
+        For more information, see https://github.com/safe-global/safe-contracts#replay-protection-eip-155
+      `)
+    }
+    return {
+      factory: info.address,
+      deployer: info.signerAddress,
+      funding: BigNumber.from(info.gasLimit).mul(BigNumber.from(info.gasPrice)).toString(),
+      signedTx: info.transaction
+    }
+  }
 
 const userConfig: HardhatUserConfig = {
   paths: {
@@ -75,23 +93,40 @@ const userConfig: HardhatUserConfig = {
       ...sharedNetworkConfig,
       url: `https://rpc.energyweb.org`,
     },
-    rinkeby: {
-      ...sharedNetworkConfig,
-      url: `https://rinkeby.infura.io/v3/${INFURA_KEY}`,
-    },
     goerli: {
       ...sharedNetworkConfig,
       url: `https://goerli.infura.io/v3/${INFURA_KEY}`,
     },
-    kovan: {
+    mumbai: {
       ...sharedNetworkConfig,
-      url: `https://kovan.infura.io/v3/${INFURA_KEY}`,
+      url: `https://polygon-mumbai.infura.io/v3/${INFURA_KEY}`,
+    },
+    polygon: {
+      ...sharedNetworkConfig,
+      url: `https://polygon-mainnet.infura.io/v3/${INFURA_KEY}`,
     },
     volta: {
       ...sharedNetworkConfig,
       url: `https://volta-rpc.energyweb.org`,
     },
+    bsc: {
+      ...sharedNetworkConfig,
+      url: `https://bsc-dataseed.binance.org/`,
+    },
+    arbitrum: {
+      ...sharedNetworkConfig,
+      url: `https://arb1.arbitrum.io/rpc`,
+    },
+    fantomTestnet: {
+      ...sharedNetworkConfig,
+      url: `https://rpc.testnet.fantom.network/`,
+    },
+    avalanche: {
+      ...sharedNetworkConfig,
+      url: `https://api.avax.network/ext/bc/C/rpc`,
+    },
   },
+  deterministicDeployment,
   namedAccounts: {
     deployer: 0,
   },
